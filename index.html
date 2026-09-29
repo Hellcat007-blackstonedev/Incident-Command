@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Incident Command v0.16.3</title>
+<link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <span class="brand-mark-inner">IC</span>
+      </div>
+      <div class="brand-copy">
+        <div class="brand-title">Incident Command</div>
+      </div>
+    </div>
+    <div class="status hud-status">
+      <span class="status-chip"><span class="status-label">TIME</span> <span id="clock">12:00</span></span>
+      <span class="status-chip"><span class="status-label">WX</span> <span id="weatherStatus">Wind 18 km/h ESE</span></span>
+    </div>
+  </header>
+
+  <aside class="left">
+    <div class="section">
+      <h2>Simulation</h2>
+      <div class="row">
+        <button id="pauseBtn">Pause</button>
+        <select id="speedSel">
+          <option value="1">1×</option>
+          <option value="2">2×</option>
+          <option value="5">5×</option>
+          <option value="10">10×</option>
+        </select>
+      </div>
+      <div class="mini" style="margin-bottom:8px">1× = real time.</div>
+      <div class="row">
+        <button id="randomFireBtn" class="danger">Generate Incident</button>
+      </div>
+      <div class="row">
+        <button id="autoCallsBtn">Auto Calls: OFF</button>
+      </div>
+      <div class="row">
+        <button id="saveBtn" class="success">Save Game</button>
+        <button id="loadBtn">Load Save</button>
+      </div>
+      <div class="row">
+        <button id="exportSaveBtn">Export Save</button>
+        <button id="importSaveBtn">Import Save</button>
+      </div>
+      <input id="importSaveInput" type="file" accept=".json,application/json" style="display:none" />
+      <div class="mini" style="margin-top:8px">
+        Completed jobs: <b><span id="completedJobsCount">0</span></b>
+      </div>
+      <div class="row">
+        <button id="newGameBtn">Clear Save / New Game</button>
+      </div>
+      <div class="mini" style="margin-top:8px">Legacy browser players can export a JSON save and import it here once.</div>
+      <label>Incident Radius from Station</label>
+      <select id="incidentRadius">
+        <option value="8">Local — within 8 km</option>
+        <option value="15" selected>District — within 15 km</option>
+        <option value="25">Extended — within 25 km</option>
+      </select>
+      <p class="mini">Random incidents generate around a placed station instead of anywhere on the visible map.</p>
+    </div>
+
+    <div class="section">
+      <h2>Map Tools</h2>
+      <div class="row">
+        <button id="stationTool">Place Station</button>
+        <button id="fireTool">Place Fire</button>
+      </div>
+      <div class="row">
+        <button id="icpTool">Place ICP</button>
+        <button id="cancelTool">Cancel Tool</button>
+      </div>
+      <p class="mini">Choose a tool, then click the map.</p>
+    </div>
+
+    <div class="section">
+      <h2>Warnings / Evacuation</h2>
+      <label>Warning Level</label>
+      <select id="warningLevel">
+        <option value="advice">Advice</option>
+        <option value="watch">Watch and Act</option>
+        <option value="emergency">Emergency Warning</option>
+        <option value="evacuate">Evacuation Area</option>
+      </select>
+      <label style="margin-top:8px">Public Message</label>
+      <input id="warningMessage" value="There is a bushfire in the area. Stay alert and monitor conditions." />
+      <div class="row" style="margin-top:8px">
+        <button id="polygonTool" class="warning">Draw Polygon</button>
+        <button id="finishPolygon">Issue</button>
+      </div>
+      <div class="row">
+        <button id="clearLastPolygon">Delete Last Polygon</button>
+      </div>
+      <p class="mini">Click map points to draw. Press Issue when done.</p>
+      <div id="warningsList" class="mini" style="margin-top:8px">No active warnings.</div>
+    </div>
+
+    <div class="section">
+      <div class="station-head">
+        <h2 style="margin:0">Stations</h2>
+        <button id="stationsToggleBtn" class="small-btn" style="width:auto">Hide List</button>
+      </div>
+      <input id="stationSearch" type="search" placeholder="Search stations / appliances…" style="margin:8px 0" />
+      <div id="stationsList" class="mini">No stations placed.</div>
+    </div>
+  </aside>
+
+  <main id="map"></main>
+
+  <aside class="right">
+    <div class="section">
+      <h2>Active Incidents</h2>
+      <div id="incidentsList" class="mini">No active incidents.</div><div class="mini" style="margin-top:8px">Incidents begin as reports. Dispatch appliances; the first crew on scene performs the size-up.</div>
+    </div>
+
+    <div class="section">
+      <h2>State / Specialist Resources</h2>
+      <div id="specialResources">
+        <div class="card">
+          <strong>Air Support</strong>
+          <div class="mini">LAT and rotary-wing resources can be requested from a selected incident.</div>
+        </div>
+        <div class="card">
+          <strong>DBCA Plant</strong>
+          <div class="mini">Loader and dozer can be requested. Plant cannot construct line until a Machine Supervisor is assigned.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Legend</h2>
+      <div class="legend">
+        <div class="swatch" style="background:#d94b3d"></div><div>Active fire perimeter</div>
+        <div class="swatch" style="background:#222;border:1px solid #777"></div><div>Burnt area</div>
+        <div class="swatch" style="background:#4d9de0"></div><div>Advice</div>
+        <div class="swatch" style="background:#e6a23c"></div><div>Watch and Act</div>
+        <div class="swatch" style="background:#d94b3d"></div><div>Emergency Warning</div>
+        <div class="swatch" style="background:#a64dff"></div><div>Evacuation Area</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Incident Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </aside>
+</div>
+
+<div id="deleteStationModal" class="modal-backdrop">
+  <div class="modal" style="width:min(430px, calc(100vw - 30px))">
+    <h2>Delete Station</h2>
+    <div id="deleteStationMessage" style="margin-bottom:12px"></div>
+    <div class="row">
+      <button id="confirmDeleteStation" class="danger">Delete Station</button>
+      <button id="cancelDeleteStation">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="renameApplianceModal" class="modal-backdrop">
+  <div class="modal" style="width:min(420px, calc(100vw - 30px))">
+    <h2>Rename Appliance</h2>
+    <div id="renameApplianceCurrent" class="mini" style="margin-bottom:10px"></div>
+    <label>Callsign</label>
+    <input id="renameApplianceInput" autocomplete="off" placeholder="e.g. Toodyay 3.4U" />
+    <div class="mini" style="margin-top:6px">Leave blank to restore the station-generated callsign.</div>
+    <div class="row" style="margin-top:14px">
+      <button id="saveRenameAppliance" class="success">Save</button>
+      <button id="cancelRenameAppliance">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="stationModal" class="modal-backdrop">
+  <div class="modal">
+    <h2 id="stationModalTitle">Create Brigade / Station</h2>
+    <div class="mini" style="margin-bottom:10px">Name the station/depot after placing it on the map, then assign the vehicles or plant actually based there.</div>
+    <label>Station / Brigade Name</label>
+    <input id="modalStationName" placeholder="e.g. Julimar VBFB" autocomplete="off" />
+
+    <label style="margin-top:12px">Station Type</label>
+    <select id="modalStationType">
+      <option value="BUSHFIRE">VBFB / BFB</option>
+      <option value="VFRS">VFRS</option>
+      <option value="VFES">VFES</option>
+      <option value="CFRS">CFRS</option>
+      <option value="WAPOL">WAPOL Police Station</option>
+      <option value="SJA">SJA Sub Centre / Station</option>
+      <option value="SES">SES Unit</option>
+      <option value="DBCA">DBCA Depot / Work Centre</option>
+      <option value="AIRBASE">Aircraft Base / Airfield</option>
+    </select>
+
+    <label style="margin-top:12px">Assigned Appliances</label>
+    <div class="mini" style="margin:4px 0 6px"><b>Bushfire / Rural</b></div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="1.4R"><span><b>1.4R</b><br><span class="mini">Rural appliance</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="2.4R"><span><b>2.4R</b><br><span class="mini">Rural appliance</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="3.4U"><span><b>3.4U</b><br><span class="mini">Urban appliance</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="4.4B"><span><b>4.4B</b><br><span class="mini">Broadacre appliance</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="12.2"><span><b>12.2</b><br><span class="mini">Bulk water</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+    </div>
+    <div class="mini" style="margin:10px 0 6px"><b>VFRS / CFRS</b></div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="Country Pump"><span><b>Country Pump</b><br><span class="mini">Structural / rural pump</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="HSR"><span><b>HSR</b><br><span class="mini">HAZMAT Structure Rescue</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="MP"><span><b>MP</b><br><span class="mini">Medium Pump</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="UPHR"><span><b>UPHR</b><br><span class="mini">Urban Pump Heavy Rescue</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="UP"><span><b>UP</b><br><span class="mini">Urban Pump</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="Light Tanker"><span><b>Light Tanker</b><br><span class="mini">Light tanker</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="CLP"><span><b>CLP</b><br><span class="mini">Combined ladder platform</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="Rehab"><span><b>Rehab</b><br><span class="mini">Crew rehabilitation</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="VRV"><span><b>VRV</b><br><span class="mini">Vertical rescue vehicle</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="RCR Tender"><span><b>RCR Tender</b><br><span class="mini">Road crash rescue tender</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+    </div>
+
+    <div class="mini" style="margin:10px 0 6px"><b>WAPOL</b></div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="GD Patrol"><span><b>GD Patrol</b><br><span class="mini">General duties patrol</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="Traffic"><span><b>Traffic</b><br><span class="mini">Traffic enforcement unit</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="Police Van"><span><b>Paddy Wagon</b><br><span class="mini">General duties / transport</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+    </div>
+
+    <div class="mini" style="margin:10px 0 6px"><b>St John WA</b></div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="Ambulance"><span><b>Ambulance</b><br><span class="mini">Emergency ambulance</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="Paramedic"><span><b>Paramedic</b><br><span class="mini">Paramedic response unit</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="Patient Transport"><span><b>Patient Transport</b><br><span class="mini">Patient transport vehicle</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+    </div>
+
+
+    <div class="mini" style="margin:10px 0 6px"><b>SES</b></div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="SES Rescue"><span><b>SES Rescue</b><br><span class="mini">Road crash / general rescue unit</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+    </div>
+
+    <div class="mini" style="margin:10px 0 6px"><b>DBCA Plant</b></div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="DBCA Loader"><span><b>Loader</b><br><span class="mini">Mineral-earth break construction</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="DBCA Dozer"><span><b>Dozer</b><br><span class="mini">Mineral-earth break construction</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+    </div>
+
+    <div class="mini" style="margin:10px 0 6px"><b>Aviation</b></div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="Helitac"><span><b>Helitac</b><br><span class="mini">Rotary-wing fire attack</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="LAT"><span><b>LAT</b><br><span class="mini">Large Air Tanker</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="SEAT"><span><b>SEAT</b><br><span class="mini">Single Engine Air Tanker</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+    </div>
+
+    <div class="row">
+      <button id="cancelStationModal">Cancel</button>
+      <button id="saveStationModal" class="success">Create Station</button>
+    </div>
+  </div>
+</div>
+
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin="">
+</script>
+
+<script src="js/core.js"></script>
+<script src="js/stations.js"></script>
+<script src="js/fire.js"></script>
+<script src="js/resources.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/save.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
