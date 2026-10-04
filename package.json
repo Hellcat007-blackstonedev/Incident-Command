@@ -1,6 +1,6 @@
 {
   "name": "incident-command",
-  "version": "0.16.3",
+  "version": "0.16.4",
   "description": "Western Australian emergency services management simulator.",
   "main": "electron/main.cjs",
   "author": "Hellcat007",

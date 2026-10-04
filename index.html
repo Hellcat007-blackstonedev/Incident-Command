@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Incident Command v0.16.3</title>
+  <title>Incident Command v0.16.4</title>
 <link rel="stylesheet" href="css/app.css" />
 </head>
 <body>
@@ -153,6 +153,32 @@
   </aside>
 </div>
 
+
+<div id="updateModal" class="modal-backdrop update-modal-backdrop" aria-hidden="true">
+  <div class="modal update-modal" role="dialog" aria-modal="true" aria-labelledby="updateModalTitle">
+    <div class="update-modal-kicker">INCIDENT COMMAND UPDATE</div>
+    <h2 id="updateModalTitle">New Update Available</h2>
+    <div id="updateModalMessage" class="update-modal-message">
+      A new version of Incident Command is available.
+    </div>
+
+    <div id="updateProgressWrap" class="update-progress-wrap" style="display:none">
+      <div class="update-progress-track">
+        <div id="updateProgressBar" class="update-progress-bar" style="width:0%"></div>
+      </div>
+      <div id="updateProgressText" class="mini update-progress-text">Downloading… 0%</div>
+    </div>
+
+    <div class="row update-modal-actions">
+      <button id="updateInstallBtn" class="success" style="display:none">Restart &amp; Install</button>
+      <button id="updateLaterBtn">Later</button>
+    </div>
+    <div id="updateModalHint" class="mini update-modal-hint">
+      The update can download in the background while you keep playing.
+    </div>
+  </div>
+</div>
+
 <div id="deleteStationModal" class="modal-backdrop">
   <div class="modal" style="width:min(430px, calc(100vw - 30px))">
     <h2>Delete Station</h2>
@@ -210,7 +236,7 @@
     <div class="mini" style="margin:10px 0 6px"><b>VFRS / CFRS</b></div>
     <div class="check-grid">
       <label class="check-item"><input type="checkbox" class="applianceChoice" value="Country Pump"><span><b>Country Pump</b><br><span class="mini">Structural / rural pump</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
-      <label class="check-item"><input type="checkbox" class="applianceChoice" value="HSR"><span><b>HSR</b><br><span class="mini">HAZMAT Structure Rescue</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="HSR"><span><b>HSR</b><br><span class="mini">Heavy rescue</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
       <label class="check-item"><input type="checkbox" class="applianceChoice" value="MP"><span><b>MP</b><br><span class="mini">Medium Pump</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
       <label class="check-item"><input type="checkbox" class="applianceChoice" value="UPHR"><span><b>UPHR</b><br><span class="mini">Urban Pump Heavy Rescue</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
       <label class="check-item"><input type="checkbox" class="applianceChoice" value="UP"><span><b>UP</b><br><span class="mini">Urban Pump</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
@@ -218,14 +244,14 @@
       <label class="check-item"><input type="checkbox" class="applianceChoice" value="CLP"><span><b>CLP</b><br><span class="mini">Combined ladder platform</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
       <label class="check-item"><input type="checkbox" class="applianceChoice" value="Rehab"><span><b>Rehab</b><br><span class="mini">Crew rehabilitation</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
       <label class="check-item"><input type="checkbox" class="applianceChoice" value="VRV"><span><b>VRV</b><br><span class="mini">Vertical rescue vehicle</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
-      <label class="check-item"><input type="checkbox" class="applianceChoice" value="RCR Tender"><span><b>RCR Tender</b><br><span class="mini">Road crash rescue tender</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="RCR Tender"><span><b>RCR Tender</b><br><span class="mini">Road crash rescue</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
     </div>
 
     <div class="mini" style="margin:10px 0 6px"><b>WAPOL</b></div>
     <div class="check-grid">
       <label class="check-item"><input type="checkbox" class="applianceChoice" value="GD Patrol"><span><b>GD Patrol</b><br><span class="mini">General duties patrol</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
       <label class="check-item"><input type="checkbox" class="applianceChoice" value="Traffic"><span><b>Traffic</b><br><span class="mini">Traffic enforcement unit</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
-      <label class="check-item"><input type="checkbox" class="applianceChoice" value="Police Van"><span><b>Paddy Wagon</b><br><span class="mini">General duties / transport</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
+      <label class="check-item"><input type="checkbox" class="applianceChoice" value="Police Van"><span><b>Police Van</b><br><span class="mini">General duties / transport</span></span><input class="applianceQty" type="number" min="1" max="6" value="1" title="Quantity" style="width:58px;margin-left:auto" /></label>
     </div>
 
     <div class="mini" style="margin:10px 0 6px"><b>St John WA</b></div>

@@ -5,6 +5,26 @@ const path = require('path');
 
 let mainWindow = null;
 let updater = null;
+let updateStartupTimer = null;
+let updateIntervalTimer = null;
+let isQuitting = false;
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (!gotSingleInstanceLock) {
+  app.quit();
+}
+
+function clearUpdaterTimers() {
+  if (updateStartupTimer) {
+    clearTimeout(updateStartupTimer);
+    updateStartupTimer = null;
+  }
+  if (updateIntervalTimer) {
+    clearInterval(updateIntervalTimer);
+    updateIntervalTimer = null;
+  }
+}
 
 function saveFilePath() {
   return path.join(app.getPath('userData'), 'save.json');
@@ -50,6 +70,10 @@ async function createWindow() {
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
+  });
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
   });
 }
 
@@ -118,6 +142,8 @@ ipcMain.handle('updates:check', async () => {
 
 ipcMain.handle('updates:install', () => {
   if (!updater) return { ok: false, disabled: true };
+  isQuitting = true;
+  clearUpdaterTimers();
   updater.quitAndInstall(false, true);
   return { ok: true };
 });
@@ -183,24 +209,59 @@ async function setupAutoUpdater() {
     });
 
     // Check shortly after startup, then every 30 minutes.
-    setTimeout(() => updater.checkForUpdatesAndNotify().catch(() => {}), 4000);
-    setInterval(() => updater.checkForUpdatesAndNotify().catch(() => {}), 30 * 60 * 1000);
+    // Use checkForUpdates() instead of the native notification helper because
+    // the renderer provides our own in-game update popup.
+    updateStartupTimer = setTimeout(() => {
+      updater?.checkForUpdates().catch(() => {});
+    }, 4000);
+
+    updateIntervalTimer = setInterval(() => {
+      updater?.checkForUpdates().catch(() => {});
+    }, 30 * 60 * 1000);
   } catch (error) {
     console.error('Auto updater setup failed:', error);
   }
 }
 
-app.whenReady().then(async () => {
-  await createWindow();
-  await setupAutoUpdater();
-
-  app.on('activate', async () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      await createWindow();
+if (gotSingleInstanceLock) {
+  app.on('second-instance', async () => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      if (app.isReady()) await createWindow();
+      return;
     }
+
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
   });
+
+  app.whenReady().then(async () => {
+    await createWindow();
+    await setupAutoUpdater();
+
+    app.on('activate', async () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        await createWindow();
+      }
+    });
+  });
+}
+
+app.on('before-quit', () => {
+  isQuitting = true;
+  clearUpdaterTimers();
+});
+
+app.on('will-quit', () => {
+  clearUpdaterTimers();
+  updater = null;
+  mainWindow = null;
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  // Incident Command is a Windows desktop game, not a tray/background app.
+  // Closing the last window should always terminate the Electron process.
+  if (!isQuitting) isQuitting = true;
+  clearUpdaterTimers();
+  app.quit();
 });

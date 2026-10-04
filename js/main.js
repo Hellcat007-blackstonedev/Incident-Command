@@ -254,9 +254,117 @@ setInterval(() => {
   renderIncidents();
 }, 250);
 
-log('Incident Command v0.16.3 initialized.');
+
+// ---- Desktop auto-update UI -------------------------------------------------
+(() => {
+  const desktop = window.bushfireDesktop;
+  if (!desktop?.isElectron || typeof desktop.onUpdateStatus !== 'function') return;
+
+  const modal = document.getElementById('updateModal');
+  const title = document.getElementById('updateModalTitle');
+  const message = document.getElementById('updateModalMessage');
+  const progressWrap = document.getElementById('updateProgressWrap');
+  const progressBar = document.getElementById('updateProgressBar');
+  const progressText = document.getElementById('updateProgressText');
+  const installBtn = document.getElementById('updateInstallBtn');
+  const laterBtn = document.getElementById('updateLaterBtn');
+  const hint = document.getElementById('updateModalHint');
+
+  if (!modal || !title || !message || !installBtn || !laterBtn) return;
+
+  let hiddenDuringDownload = false;
+
+  const showUpdateModal = () => {
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+  };
+
+  const hideUpdateModal = () => {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+  };
+
+  laterBtn.addEventListener('click', () => {
+    hiddenDuringDownload = true;
+    hideUpdateModal();
+  });
+
+  installBtn.addEventListener('click', async () => {
+    installBtn.disabled = true;
+    installBtn.textContent = 'Restarting…';
+    const result = await desktop.installUpdate();
+    if (!result?.ok) {
+      installBtn.disabled = false;
+      installBtn.textContent = 'Restart & Install';
+      message.textContent = 'The update could not be installed automatically. Please try again.';
+    }
+  });
+
+  desktop.onUpdateStatus(status => {
+    if (!status || typeof status !== 'object') return;
+
+    if (status.state === 'available') {
+      hiddenDuringDownload = false;
+      title.textContent = 'New Update Available';
+      message.textContent = status.version
+        ? `Incident Command v${status.version} is available and will download in the background.`
+        : 'A new version of Incident Command is available and will download in the background.';
+      if (progressWrap) progressWrap.style.display = '';
+      if (progressBar) progressBar.style.width = '0%';
+      if (progressText) progressText.textContent = 'Starting download…';
+      installBtn.style.display = 'none';
+      laterBtn.textContent = 'Hide';
+      if (hint) hint.textContent = 'You can keep playing while the update downloads.';
+      showUpdateModal();
+      return;
+    }
+
+    if (status.state === 'downloading') {
+      const pct = Math.max(0, Math.min(100, Number(status.percent) || 0));
+      if (progressWrap) progressWrap.style.display = '';
+      if (progressBar) progressBar.style.width = `${pct}%`;
+      if (progressText) progressText.textContent = `Downloading… ${Math.round(pct)}%`;
+      if (!hiddenDuringDownload && !modal.classList.contains('open')) showUpdateModal();
+      return;
+    }
+
+    if (status.state === 'downloaded') {
+      hiddenDuringDownload = false;
+      title.textContent = 'Update Ready';
+      message.textContent = status.version
+        ? `Incident Command v${status.version} has been downloaded and is ready to install.`
+        : 'The latest Incident Command update has been downloaded and is ready to install.';
+      if (progressWrap) progressWrap.style.display = '';
+      if (progressBar) progressBar.style.width = '100%';
+      if (progressText) progressText.textContent = 'Download complete';
+      installBtn.disabled = false;
+      installBtn.textContent = 'Restart & Install';
+      installBtn.style.display = '';
+      laterBtn.textContent = 'Later';
+      if (hint) hint.textContent = 'If you choose Later, the update will install automatically when Incident Command exits.';
+      showUpdateModal();
+      return;
+    }
+
+    if (status.state === 'error') {
+      // Do not throw an intrusive popup for a transient GitHub/network error.
+      // If the updater window is already visible, give the player useful feedback.
+      if (modal.classList.contains('open')) {
+        title.textContent = 'Update Check Failed';
+        message.textContent = 'Incident Command could not contact the update service. You can keep playing and it will try again later.';
+        if (progressWrap) progressWrap.style.display = 'none';
+        installBtn.style.display = 'none';
+        laterBtn.textContent = 'Close';
+        if (hint) hint.textContent = '';
+      }
+      console.warn('Incident Command updater:', status.message || 'Unknown updater error');
+    }
+  });
+})();
+
+log('Incident Command v0.16.4 initialized.');
 randomizeWind();
 randomizeFuelLoad();
 ensureRescueHelicopterBases();
 renderStations();
-log('v0.16.3 loaded: fuel load is now simulated dynamically alongside wind.');
+log('v0.16.4 loaded: desktop shutdown reliability and in-game updater UI enabled.');

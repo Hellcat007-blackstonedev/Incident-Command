@@ -722,3 +722,53 @@ button:disabled{
   #app{ grid-template-columns: 300px 1fr 300px; }
   .brand-subtitle{ display:none; }
 }
+
+
+/* Incident Command desktop updater */
+.update-modal-backdrop {
+  z-index: 9999;
+  background: rgba(3, 8, 15, 0.78);
+  backdrop-filter: blur(7px);
+}
+.update-modal {
+  width: min(520px, calc(100vw - 36px));
+  border: 1px solid rgba(255, 153, 51, 0.30);
+  box-shadow: 0 28px 90px rgba(0,0,0,0.55), 0 0 40px rgba(255, 126, 26, 0.08);
+}
+.update-modal-kicker {
+  margin-bottom: 7px;
+  color: #ff9a3d;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .15em;
+}
+.update-modal-message {
+  color: #d8e0e8;
+  line-height: 1.55;
+}
+.update-progress-wrap {
+  margin-top: 17px;
+}
+.update-progress-track {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.09);
+  border: 1px solid rgba(255,255,255,.07);
+}
+.update-progress-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #d96a17, #ff9b3f);
+  transition: width .18s ease;
+}
+.update-progress-text {
+  margin-top: 7px;
+}
+.update-modal-actions {
+  margin-top: 18px;
+}
+.update-modal-hint {
+  margin-top: 9px;
+  color: #84909c;
+}
