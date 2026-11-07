@@ -390,9 +390,12 @@ async function loadGame() {
 
   (data.icps || []).forEach(i => {
     const latlng = L.latLng(i.lat,i.lng);
+    const icp = {id:i.id,latlng,marker:null,fireId:i.fireId || null};
+    const linkedFire = state.fires.find(f => Number(f.id) === Number(icp.fireId)) || null;
     const marker = L.marker(latlng, {icon:makeIcon(`ICP ${i.id}`,'#34495e')}).addTo(map);
-    marker.bindPopup(`<b>Incident Control Point ${i.id}</b>`);
-    state.icps.push({id:i.id,latlng,marker,fireId:i.fireId || null});
+    icp.marker = marker;
+    marker.bindPopup(icpPopupHtml(icp, linkedFire));
+    state.icps.push(icp);
   });
 
   (data.warnings || []).forEach(w => {

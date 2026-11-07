@@ -362,9 +362,9 @@ setInterval(() => {
   });
 })();
 
-log('Incident Command v0.16.4 initialized.');
+log('Incident Command v0.16.5 initialized.');
 randomizeWind();
 randomizeFuelLoad();
 ensureRescueHelicopterBases();
 renderStations();
-log('v0.16.4 loaded: desktop shutdown reliability and in-game updater UI enabled.');
+log('v0.16.5 loaded: ICP deletion and safe response rerouting enabled.');

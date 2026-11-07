@@ -320,10 +320,12 @@ async function dispatchAppliance(fireId, applianceId) {
   // Improve the route asynchronously. Failure simply leaves the provisional
   // route in place instead of trapping the appliance in a "Routing" state.
   try {
+    const routeDestinationType = assignment.destinationType;
     const route = await getRoadRoute(dispatchOrigin, target);
 
-    // It may have arrived/released while routing was being calculated.
-    if (assignment.status !== 'En Route') return;
+    // It may have arrived/released or been rerouted while the original route
+    // request was still in flight (for example, because its ICP was deleted).
+    if (assignment.status !== 'En Route' || assignment.destinationType !== routeDestinationType) return;
 
     const elapsed = Math.max(0, assignment.totalEta - assignment.eta);
 

@@ -1,6 +1,18 @@
 /* Incident creation, ICPs, weather, fire geometry and fire-behaviour model. */
+function nextICPId() {
+  return state.icps.reduce((maxId, icp) => Math.max(maxId, Number(icp.id) || 0), 0) + 1;
+}
+
+function icpPopupHtml(icp, fire=null) {
+  return (
+    `<b>Incident Control Point ${icp.id}</b>` +
+    (fire ? `<br>Assigned to ${fire.name}` : '') +
+    `<br><button class="danger" style="margin-top:8px" onclick="deleteICP(${icp.id})">Delete ICP</button>`
+  );
+}
+
 function addICP(latlng) {
-  const id = state.icps.length + 1;
+  const id = nextICPId();
 
   let fire = state.fires.find(f => f.id === state.selectedIncidentId);
   if (!fire && state.fires.length) {
@@ -9,16 +21,22 @@ function addICP(latlng) {
       .sort((a,b) => a.d - b.d)[0].f;
   }
 
+  const icp = {id,latlng,marker:null,fireId:fire ? fire.id : null};
   const marker = L.marker(latlng, {icon:makeIcon(`ICP ${id}`,'#34495e')}).addTo(map);
-  marker.bindPopup(
-    `<b>Incident Control Point ${id}</b>` +
-    (fire ? `<br>Assigned to ${fire.name}` : '')
-  );
+  icp.marker = marker;
+  marker.bindPopup(icpPopupHtml(icp, fire));
 
-  const icp = {id,latlng,marker,fireId:fire ? fire.id : null};
   state.icps.push(icp);
 
   if (fire) {
+    // If this incident already had an ICP, detach it so only the newly placed
+    // command point receives future staging traffic.
+    const previousICP = state.icps.find(i => i.id === fire.icpId && i.id !== id);
+    if (previousICP) {
+      previousICP.fireId = null;
+      previousICP.marker?.setPopupContent(icpPopupHtml(previousICP, null));
+    }
+
     fire.icpId = id;
     log(`Incident Control Point ${id} established for ${fire.name}. Responding appliances will stage there first.`);
     renderIncidents();
@@ -26,6 +44,96 @@ function addICP(latlng) {
     log(`Incident Control Point ${id} established.`);
   }
 }
+
+function redirectAssignmentFromDeletedICP(fire, asn) {
+  const found = allAppliances().find(x => x.appliance.id === asn.applianceId);
+  if (!found) return;
+
+  // 12.2 appliances are ICP-only bulk water sources. With the control point
+  // gone they cannot remain committed, so release them cleanly to station.
+  if (found.appliance.code === '12.2') {
+    void releaseApplianceFromIncident(fire.id, asn.applianceId, 'ICP removed');
+    return;
+  }
+
+  const incidentTarget = fire.ignition || fire.center;
+
+  if (asn.status === 'At ICP') {
+    asn.status = 'On Scene';
+    asn.destinationType = 'Incident';
+    found.appliance.status = 'On Scene';
+    found.appliance.eta = 0;
+
+    if (asn.marker) {
+      asn.marker.setLatLng(incidentTarget);
+      asn.marker.setTooltipContent(`${asn.callsign} • On Scene • awaiting task`);
+    }
+    return;
+  }
+
+  if (asn.status !== 'En Route' || asn.destinationType !== 'ICP') return;
+
+  const currentPos = asn.marker?.getLatLng?.() || asn.routeCoords?.[0] || incidentTarget;
+  const distanceKm = Math.max(0.05, haversineKm(currentPos, incidentTarget));
+  const eta = Math.max(0.25, (distanceKm / 100) * 60);
+
+  asn.destinationType = 'Incident';
+  asn.routingPending = false;
+  asn.routeFallback = true;
+  asn.routeCoords = [L.latLng(currentPos.lat, currentPos.lng), L.latLng(incidentTarget.lat, incidentTarget.lng)];
+  asn.distance = distanceKm;
+  asn.straightDistance = distanceKm;
+  asn.roadDistance = null;
+  asn.firegroundDistance = 0;
+  asn.totalEta = eta;
+  asn.eta = eta;
+  found.appliance.eta = eta;
+
+  if (asn.routeLine && map.hasLayer(asn.routeLine)) map.removeLayer(asn.routeLine);
+  if (asn.firegroundLine && map.hasLayer(asn.firegroundLine)) map.removeLayer(asn.firegroundLine);
+
+  asn.routeLine = L.polyline(asn.routeCoords, {
+    color:'#777',
+    weight:2,
+    dashArray:'3 7',
+    opacity:.45
+  }).addTo(map);
+  asn.firegroundLine = null;
+
+  if (asn.marker) {
+    asn.marker.setTooltipContent(`${asn.callsign} • rerouted direct to incident`);
+  }
+}
+
+function deleteICP(id) {
+  const icp = state.icps.find(i => Number(i.id) === Number(id));
+  if (!icp) return;
+
+  if (icp.marker) {
+    icp.marker.closePopup?.();
+    if (map.hasLayer(icp.marker)) map.removeLayer(icp.marker);
+  }
+
+  const affectedFires = state.fires.filter(f => Number(f.icpId) === Number(icp.id));
+
+  affectedFires.forEach(fire => {
+    fire.icpId = null;
+    (fire.assignments || []).slice().forEach(asn => redirectAssignmentFromDeletedICP(fire, asn));
+    log(`Incident Control Point ${icp.id} removed from ${fire.name}. Future responses will route directly to the incident.`);
+  });
+
+  state.icps = state.icps.filter(i => Number(i.id) !== Number(icp.id));
+
+  if (!affectedFires.length) {
+    log(`Incident Control Point ${icp.id} removed.`);
+  }
+
+  renderIncidents();
+  renderStations();
+}
+
+// Popup buttons call this through the page global.
+window.deleteICP = deleteICP;
 
 function offsetPoint(origin, northMeters, eastMeters) {
   const latRad = origin.lat * Math.PI / 180;
